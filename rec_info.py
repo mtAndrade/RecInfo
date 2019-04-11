@@ -98,23 +98,23 @@ def main():
 
     print("Boolean/AND",corpus.boolean(query, "and"))
     print("Boolean/OR",corpus.boolean(query, "or"))
-    # numpy.set_printoptions(precision=2, linewidth=90)
-    # print('query = ', repr(query))
-    # print(' w`=', numpy.array(q), end='\n\n')
+    numpy.set_printoptions(precision=2, linewidth=90)
+    print('query = ', repr(query))
+    print(' w`=', numpy.array(q), end='\n\n')
 
-    # results = {}
+    results = {}
 
-    # for i, doc in enumerate(documents):
-    #     rank = corpus.vector_similarity(m[i], q)
-    #     print('d%d =' % i, repr(doc))
-    #     print(' w =', numpy.array(m[i]), end='\n')
-    #     print(' rank =', rank, end='\n\n')
+    for i, doc in enumerate(documents):
+        rank = corpus.vector_similarity(m[i], q)
+        print('d%d =' % i, repr(doc))
+        print(' w =', numpy.array(m[i]), end='\n')
+        print(' rank =', rank, end='\n\n')
 
-    #     if(rank > 0):
-    #         results["d"+str(i)] = rank
+        if(rank > 0):
+            results["d"+str(i)] = rank
 
-    # results = sorted(results.items(), key=operator.itemgetter(1))
-    # print("Documentos/Ranks", results)
+    results = sorted(results.items(), key=operator.itemgetter(1))
+    print("Documentos/Ranks", results)
 
 
 
