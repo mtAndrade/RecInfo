@@ -10,6 +10,72 @@ documents = ['O peã e o caval são pec de xadrez. O caval é o melhor do jog.',
 stopwords = ['a', 'o', 'e', 'é', 'de', 'do', 'no', 'são']
 separators = [' ', ',', '.', '!', '?']
 query = 'xadrez peã caval torr'
+alpha = 1
+beta = 0.75
+gama = 0.15
+
+
+class PageRank:
+    def __init__(self,threshhold = 0.0001, beta=0.8, number_pages = 4):
+        self.number_pages = number_pages
+        self.T = 1/number_pages        
+        self.struct = {
+            "A":{
+                "linksTo":["B", "C"],
+                "linkedBy":["C"],
+                "rank":self.T 
+            },
+            "B":{
+                "linksTo":["C"],
+                "linkedBy":["A"],
+                "rank":self.T
+            },
+            "C":{
+                "linksTo":["A"],
+                "linkedBy":["A", "B", "D"],
+                "rank":self.T
+            },
+            "D":{
+                "linksTo":["C"],
+                "linkedBy":[],
+                "rank":self.T
+            }
+        }
+        
+        self.threshhold = threshhold
+        self.beta = beta
+
+    def rank(self): 
+        notEnd = True
+        oldRank = {
+            "A": self.struct["A"]["rank"],
+            "B": self.struct["B"]["rank"],
+            "C": self.struct["C"]["rank"],
+            "D": self.struct["D"]["rank"],
+        }
+        while notEnd:
+            for page in self.struct.keys():
+                randomPath = (1 - self.beta)/self.T   
+
+                inRank = 0
+                for linked in self.struct[page]["linkedBy"]:
+                    inRank += self.struct[linked]["rank"] / len( self.struct[linked]["linksTo"] )
+
+                newRank = randomPath +  self.beta*inRank
+                self.struct[page]["rank"] = newRank
+            
+            count = 0
+            for page in oldRank.keys():                            
+                # print(page, oldRank[page],self.struct[page]["rank"])
+                if numpy.absolute(oldRank[page] - self.struct[page]["rank"]) <= self.threshhold:
+                    count +=1
+                oldRank[page] = self.struct[page]["rank"]  
+
+            if count == self.number_pages:
+                notEnd = False
+
+        print( self.struct )
+            
 
 
 class Corpus:
@@ -20,6 +86,7 @@ class Corpus:
         self._terms = []
         self._freqs = []
         self._ns = []
+        
 
     def _preprocess(self, doc):
         doc = doc.lower()
@@ -51,6 +118,16 @@ class Corpus:
         idf = self._idf()
         return [t*i for (t, i) in zip(tf, idf)]
 
+    def _betha(self, freq, doc, K = 1, b=0.75):
+        tam = len(doc)
+        avg = sum([len(t.split()) for t in self._docs])/len(self._docs)        
+        return ((K + 1) * freq) / (K * ((1 - b) + b * (tam / avg)) + freq)
+    
+    def _rocchio_weight(self, freq):
+        tf = self._tf(freq)
+        idf = self._idf()
+        return [t*i for (t, i) in zip(tf, idf)]
+
     def _query_weight(self, freq):
         return self._weight(freq)
 
@@ -68,6 +145,11 @@ class Corpus:
         q = self._preprocess(q)
         freq = self._frequency(q)
         return self._query_weight(freq)
+    
+    def query_rocchio_weight(self, q):
+        q = self._preprocess(q)
+        freq = self._frequency(q)
+        return self._rocchio_weight(freq)
 
     def weight_matrix(self):
         return [self._weight(f) for f in self._freqs]
@@ -87,34 +169,68 @@ class Corpus:
             result =  (int(strBitL, 2) & result) if operation == "and" else (int(strBitL, 2) | result)
 
         return self.find_indexes("{0:b}".format(result), '1')
+    
+    def bm_25(self, query): 
+        sim_bm25 = []
+        
+        # numero de docs na colecao
+        N = len(self._docs)
+        # pra cada doc
+        for doc in self._docs:
+            # auxiliar que vai acumular o somatorio
+            sum = 0        
+            # pra cada termo
+            for freq in self._frequency(query):                
+                beta = self._betha(freq, doc)    
+                print(self.weight_matrix())       
+                break
+                # ni = sum([1 for i in self._docs[word].values() if i > 0])
+                # nj = 0
+                # for k in range(N):
+                #     valor = m_inc_cons.iloc[j,k]
+                #     if valor > 0 :
+                #     nj = nj + 1
+                
+                # p_log = (N - nj + 0.5)/(nj + 0.5)
+                # som = som + beta * np.log2(p_log)
+                
+                # sim_bm25.append(som)
+            
+        return sim_bm25
         
 def main():
-    corpus = Corpus(separators, stopwords)
-    for doc in documents:
-        corpus.add_document(doc)
+    # corpus = Corpus(separators, stopwords)
+    # for doc in documents:
+    #     corpus.add_document(doc)
 
-    q = corpus.query_weight(query)
-    m = corpus.weight_matrix()
+    # q = corpus.query_weight(query)
+    # m = corpus.weight_matrix()
 
-    print("Boolean/AND",corpus.boolean(query, "and"))
-    print("Boolean/OR",corpus.boolean(query, "or"))
-    numpy.set_printoptions(precision=2, linewidth=90)
-    print('query = ', repr(query))
-    print(' w`=', numpy.array(q), end='\n\n')
+    # # print("Boolean/AND",corpus.boolean(query, "and"))
+    # # print("Boolean/OR",corpus.boolean(query, "or"))
+    # numpy.set_printoptions(precision=2, linewidth=90)
+    # # print('query = ', repr(query))
+    # # print(' w`=', numpy.array(q), end='\n\n')
 
-    results = {}
+    # results = {}
 
-    for i, doc in enumerate(documents):
-        rank = corpus.vector_similarity(m[i], q)
-        print('d%d =' % i, repr(doc))
-        print(' w =', numpy.array(m[i]), end='\n')
-        print(' rank =', rank, end='\n\n')
+    # corpus.bm_25(query)
 
-        if(rank > 0):
-            results["d"+str(i)] = rank
+    # for i, doc in enumerate(documents):
+    #     rank = corpus.vector_similarity(m[i], q)
+    #     # print('d%d =' % i, repr(doc))
+    #     # print(' w =', numpy.array(m[i]), end='\n')
+    #     # print(' rank =', rank, end='\n\n')
 
-    results = sorted(results.items(), key=operator.itemgetter(1))
-    print("Documentos/Ranks", results)
+    #     if(rank > 0):
+    #         results["d"+str(i)] = rank
+        
+
+    # results = sorted(results.items(), key=operator.itemgetter(1))
+    # # print("Documentos/Ranks", results)
+
+    pr = PageRank()
+    pr.rank()
 
 
 
