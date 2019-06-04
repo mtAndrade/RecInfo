@@ -77,6 +77,68 @@ class PageRank:
         print( self.struct )
             
 
+class HITS:
+    def __init__(self,threshhold = 0.0001, beta=0.8, number_pages = 4, k=650):
+        self.number_pages = number_pages
+        self.k = k
+        self.T = 1        
+        self.struct = {
+            "A":{
+                "linksTo":["B", "C"],
+                "linkedBy":["C"],
+                "hub":self.T,
+                "authority":self.T 
+            },
+            "B":{
+                "linksTo":["C"],
+                "linkedBy":["A"],
+                "hub":self.T,
+                "authority":self.T
+            },
+            "C":{
+                "linksTo":["A"],
+                "linkedBy":["A", "B", "D"],
+                "hub":self.T,
+                "authority":self.T
+            },
+            "D":{
+                "linksTo":["C"],
+                "linkedBy":[],
+                "hub":self.T,
+                "authority":self.T
+            }
+        }
+
+    def update_auth_score(self):
+        for page in self.struct.keys():
+            self.struct[page]["authority"] = sum( self.struct[linkedBy]["hub"] for linkedBy in self.struct[page]["linkedBy"])
+               
+    def update_hub_score(self):
+        for page in self.struct.keys():
+            self.struct[page]["hub"] = sum( self.struct[linkTo]["authority"] for linkTo in self.struct[page]["linksTo"])
+
+    def normalize(self):
+        authority_values = []
+        hub_values = []
+
+        for page in self.struct.keys():
+            authority_values.append(self.struct[page]["authority"])
+            hub_values.append(self.struct[page]["hub"])
+        
+        auth_norm = numpy.linalg.norm(authority_values)
+        hub_norm = numpy.linalg.norm(hub_values)
+
+        for page in self.struct.keys():
+            self.struct[page]["authority"] = self.struct[page]["authority"]/ auth_norm
+            self.struct[page]["hub"] = self.struct[page]["hub"]/ hub_norm
+
+    def rank(self):
+        for _ in range(self.k):
+            self.update_auth_score()
+            self.update_hub_score()
+            self.normalize()
+        print(self.struct)
+
 
 class Corpus:
     def __init__(self, seps=' ', stop=[]):
@@ -197,40 +259,50 @@ class Corpus:
                 # sim_bm25.append(som)
             
         return sim_bm25
+
+
+def print_vector_result(query, documents, corpus):
+    q = corpus.query_weight(query)
+    m = corpus.weight_matrix()
+    numpy.set_printoptions(precision=2, linewidth=90)
+    print('query = ', repr(query))
+    print(' w`=', numpy.array(q), end='\n\n')
+    results = {}
+    for i, doc in enumerate(documents):
+        rank = corpus.vector_similarity(m[i], q)
+        print('d%d =' % i, repr(doc))
+        print(' w =', numpy.array(m[i]), end='\n')
+        print(' rank =', rank, end='\n\n')
+
+        if(rank > 0):
+            results["d"+str(i)] = rank
         
+
+    results = sorted(results.items(), key=operator.itemgetter(1))
+    print("Documentos/Ranks", results)
+
 def main():
-    # corpus = Corpus(separators, stopwords)
-    # for doc in documents:
-    #     corpus.add_document(doc)
+    corpus = Corpus(separators, stopwords)
+    for doc in documents:
+        corpus.add_document(doc)
 
-    # q = corpus.query_weight(query)
-    # m = corpus.weight_matrix()
 
-    # # print("Boolean/AND",corpus.boolean(query, "and"))
-    # # print("Boolean/OR",corpus.boolean(query, "or"))
-    # numpy.set_printoptions(precision=2, linewidth=90)
-    # # print('query = ', repr(query))
-    # # print(' w`=', numpy.array(q), end='\n\n')
+    
+    and_boolean_result = corpus.boolean(query, "and")
+    or_boolean_result = corpus.boolean(query, "or")
+    # print(and_boolean_result)
+    # print(or_boolean_result)
+    
+    # print_vector_result(query, documents, corpus)
 
-    # results = {}
 
     # corpus.bm_25(query)
 
-    # for i, doc in enumerate(documents):
-    #     rank = corpus.vector_similarity(m[i], q)
-    #     # print('d%d =' % i, repr(doc))
-    #     # print(' w =', numpy.array(m[i]), end='\n')
-    #     # print(' rank =', rank, end='\n\n')
+    # pr = PageRank()
+    # pr.rank()
 
-    #     if(rank > 0):
-    #         results["d"+str(i)] = rank
-        
-
-    # results = sorted(results.items(), key=operator.itemgetter(1))
-    # # print("Documentos/Ranks", results)
-
-    pr = PageRank()
-    pr.rank()
+    hits = HITS()
+    hits.rank()
 
 
 
